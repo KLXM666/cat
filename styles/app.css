@@ -1,0 +1,989 @@
+/*
+ * 布局、阅读排版、触摸区（KD-7 / KD-8 / KD-13）
+ *
+ * 手机为主：滚动容器是 #viewport（唯一滚动容器），一律用它的 clientHeight，
+ * 绝不用 window.innerHeight —— 地址栏收缩会让后者变化 60–100px。
+ */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  height: 100dvh;
+}
+
+@supports not (height: 100dvh) {
+  html {
+    height: 100vh;
+  }
+}
+
+body {
+  margin: 0;
+  height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-ui);
+  -webkit-text-size-adjust: 100%;
+  -webkit-font-smoothing: antialiased;
+  overscroll-behavior: none;
+}
+
+#app.app {
+  height: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+button {
+  font-family: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* ───────────────────────────── 启动占位 ───────────────────────────── */
+
+/*
+ * index.html 里的静态占位。脚本没跑起来（file:// 被拦、404、语法错误）时，
+ * 用户看到的是这段说明而不是一片空白；main.js 渲染首屏时会把它整体替换掉。
+ */
+.boot {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 32px 24px calc(env(safe-area-inset-bottom) + 32px);
+  text-align: center;
+}
+
+.boot-mark {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-family: var(--font-read);
+  font-size: 26px;
+  margin-bottom: 4px;
+}
+
+.boot-text {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.boot-hint {
+  margin: 0;
+  max-width: 34em;
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--text-muted);
+}
+
+.boot-hint:empty {
+  display: none;
+}
+
+/* ───────────────────────────── 通用控件 ───────────────────────────── */
+
+.primary-btn {
+  border: 0;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--accent-contrast);
+  font-size: 14px;
+  font-weight: 600;
+  padding: 9px 16px;
+  white-space: nowrap;
+}
+
+.primary-btn:active {
+  filter: brightness(0.95);
+}
+
+.ghost-btn {
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 13px;
+  padding: 7px 14px;
+}
+
+.icon-btn {
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--bg-elevated);
+  color: var(--text-muted);
+  font-size: 16px;
+  line-height: 1;
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+}
+
+/* ───────────────────────────── 书架 ───────────────────────────── */
+
+.shelf {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: calc(env(safe-area-inset-top) + 18px) 16px calc(env(safe-area-inset-bottom) + 28px);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.shelf-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.shelf-title {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.shelf-sub {
+  margin: 4px 0 0;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.shelf-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: none;
+}
+
+.hint-bar:empty {
+  display: none;
+}
+
+.hint {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: var(--accent-soft);
+  color: var(--text);
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+
+.hint-text {
+  flex: 1;
+}
+
+.hint-close {
+  flex: none;
+  border: 0;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 18px;
+  line-height: 1;
+  padding: 0 2px;
+}
+
+.book-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.book {
+  display: flex;
+  gap: 12px;
+  padding: 12px;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
+  transition: transform 0.12s ease, border-color 0.12s ease;
+}
+
+.book:active {
+  transform: scale(0.995);
+  border-color: var(--border-strong);
+}
+
+.book.is-missing {
+  opacity: 0.72;
+  border-style: dashed;
+}
+
+.book-cover {
+  position: relative;
+  flex: none;
+  width: 46px;
+  height: 62px;
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+}
+
+.book-cover-char {
+  color: #ffffff;
+  font-family: var(--font-read);
+  font-size: 22px;
+  line-height: 1;
+}
+
+.book-cover-spine {
+  position: absolute;
+  left: 5px;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: rgba(255, 255, 255, 0.45);
+}
+
+.book-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.book-title {
+  margin: 0 0 4px;
+  font-size: 16px;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.book-meta,
+.book-position {
+  margin: 0 0 2px;
+  font-size: 12px;
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.book-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.badge {
+  font-size: 11px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: var(--bg-sunken);
+  color: var(--text-muted);
+}
+
+.badge-warn {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.book-bar {
+  margin-top: 8px;
+  height: 3px;
+  border-radius: 999px;
+  background: var(--border);
+  overflow: hidden;
+}
+
+.book-bar-fill {
+  height: 100%;
+  background: var(--accent);
+  border-radius: 999px;
+}
+
+.book-side {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  justify-content: space-between;
+}
+
+.book-percent {
+  font-size: 13px;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.book-menu {
+  border: 0;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 18px;
+  line-height: 1;
+  padding: 6px 2px 0;
+}
+
+.empty {
+  margin-top: 8vh;
+  text-align: center;
+  padding: 24px;
+  border-radius: 16px;
+  border: 1px dashed var(--border-strong);
+  background: var(--bg-elevated);
+}
+
+.empty-mark {
+  width: 54px;
+  height: 54px;
+  margin: 0 auto 14px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-family: var(--font-read);
+  font-size: 24px;
+}
+
+.empty-title {
+  margin: 0 0 8px;
+  font-size: 17px;
+  font-weight: 600;
+}
+
+.empty-text {
+  margin: 0 0 18px;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--text-muted);
+  text-align: left;
+}
+
+.shelf-foot {
+  margin-top: auto;
+  padding-top: 12px;
+  font-size: 11.5px;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+/* ───────────────────────────── 阅读器 ───────────────────────────── */
+
+.reader {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+}
+
+.viewport {
+  position: relative; /* offsetTop 基准：进度换算靠它 */
+  flex: 1;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
+  touch-action: manipulation;
+  font-family: var(--font-read);
+  font-size: var(--reader-font-size);
+  line-height: var(--reader-line-height);
+  color: var(--text);
+  /* v0.1 不做文本复制，避免长按选中打断阅读 */
+  user-select: none;
+  -webkit-user-select: none;
+  /*
+   * 关掉浏览器自带的滚动锚定：换章时我们自己算锚点（captureAnchor/applyAnchor），
+   * 两套机制同时改写 scrollTop 会互相打架，表现为"内容被拽回"。
+   */
+  overflow-anchor: none;
+  outline: none;
+  padding-bottom: calc(env(safe-area-inset-bottom) + 40px);
+}
+
+.seg {
+  /* flow-root 防止首元素 margin 溢出，保证 offsetTop / offsetHeight 准确 */
+  display: flow-root;
+  padding-left: max(1.2em, env(safe-area-inset-left));
+  padding-right: max(1.2em, env(safe-area-inset-right));
+}
+
+.chapter-title {
+  margin: 1.5em 0 0.9em;
+  font-size: 1.14em;
+  font-weight: 700;
+  line-height: 1.5;
+  text-indent: 0;
+  color: var(--text);
+}
+
+.para {
+  margin: 0 0 0.6em;
+  /* 首行缩进由 CSS 接管：原文全角缩进已在 normalize 里剥离 */
+  text-indent: 2em;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+
+/*
+ * 关于 content-visibility：技术方案 KD-7 建议给离屏段落加 content-visibility: auto，
+ * 但它会让段落高度先按 contain-intrinsic-size 估算、稍后才变成真实值。
+ * 实测（Chromium）这会让浏览器滚动锚定在"真实高度落地"时改写 scrollTop，
+ * 表现为换章后自己往下窜一段，并把章内百分比算成 >100%（KD-8 明确列为风险项）。
+ * 本项目 DOM 上界只有约 150 段，收益不抵这个代价，因此按 KD-8 允许的方式
+ * 对分段禁用该属性，只保留 contain 的布局/绘制隔离。
+ */
+.seg:not(.seg-main) .para {
+  contain: layout paint style;
+}
+
+.seg-tail {
+  opacity: 0.96;
+}
+
+/* ───────────────────────────── 工具栏 ───────────────────────────── */
+
+.bar {
+  position: absolute;
+  left: 0;
+  right: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 10px;
+  background: var(--bg);
+  transition: transform 0.2s ease, opacity 0.2s ease;
+}
+
+.bar-top {
+  top: 0;
+  height: calc(50px + env(safe-area-inset-top));
+  padding-top: env(safe-area-inset-top);
+  border-bottom: 1px solid var(--border);
+}
+
+.bar-bottom {
+  bottom: 0;
+  height: calc(46px + env(safe-area-inset-bottom));
+  padding-bottom: env(safe-area-inset-bottom);
+  border-top: 1px solid var(--border);
+}
+
+.bars-hidden .bar-top {
+  transform: translateY(-100%);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.bars-hidden .bar-bottom {
+  transform: translateY(100%);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.bar-btn {
+  flex: none;
+  border: 0;
+  background: transparent;
+  font-size: 13px;
+  color: var(--text-muted);
+  padding: 8px 6px;
+  border-radius: 8px;
+}
+
+.bar-btn:active {
+  background: var(--bg-sunken);
+}
+
+.bar-back {
+  font-size: 24px;
+  line-height: 1;
+  padding: 0 8px 4px 4px;
+  color: var(--text);
+}
+
+.bar-titles {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.bar-book,
+.bar-chapter {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bar-book {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.bar-chapter {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.bar-actions {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.bar-progress {
+  flex: 1;
+  text-align: center;
+  font-size: 12px;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ───────────────────────────── 目录抽屉 ───────────────────────────── */
+
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 15;
+  background: rgba(0, 0, 0, 0.38);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+}
+
+.backdrop.is-open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.drawer {
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 20;
+  width: min(80vw, 330px);
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-elevated);
+  border-right: 1px solid var(--border);
+  transform: translateX(-103%);
+  transition: transform 0.22s ease;
+  padding-top: env(safe-area-inset-top);
+}
+
+.drawer.is-open {
+  transform: translateX(0);
+}
+
+.drawer-head {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--border);
+}
+
+.drawer-title {
+  flex: 1;
+  min-width: 0;
+  font-size: 14px;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.drawer-close {
+  border: 0;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 20px;
+  line-height: 1;
+  padding: 0 4px;
+}
+
+.drawer-list {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  padding: 0 8px calc(env(safe-area-inset-bottom) + 16px);
+}
+
+/*
+ * 目录是固定行高虚拟列表（见 reader.js 的 DRAWER_ROW_HEIGHT）：
+ * drawer-spacer 撑出总高度，drawer-item 用 top 绝对定位到自己的槽位。
+ * 行高必须与 JS 常量一致，否则滚动窗口会错位。
+ */
+.drawer-spacer {
+  position: relative;
+  width: 100%;
+}
+
+.drawer-rows {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+}
+
+.drawer-item {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 40px;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  text-align: left;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  padding: 0 8px;
+  font-size: 13px;
+  line-height: 1.3;
+  color: var(--text);
+  overflow: hidden;
+}
+
+.drawer-item.is-active {
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.drawer-item-index {
+  flex: none;
+  width: 2.2em;
+  text-align: right;
+  color: var(--text-muted);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+.drawer-item-title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ───────────────────────────── 设置面板 ───────────────────────────── */
+
+.sheet {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 30;
+  max-height: 82dvh;
+  overflow-y: auto;
+  background: var(--bg-elevated);
+  border-radius: 16px 16px 0 0;
+  border-top: 1px solid var(--border);
+  padding-bottom: env(safe-area-inset-bottom);
+  transform: translateY(103%);
+  transition: transform 0.24s ease;
+  box-shadow: var(--shadow);
+}
+
+.sheet.is-open {
+  transform: translateY(0);
+}
+
+.sheet-handle {
+  width: 38px;
+  height: 4px;
+  margin: 10px auto 4px;
+  border-radius: 999px;
+  background: var(--border-strong);
+}
+
+.sheet-body {
+  padding: 8px 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.sheet-heading {
+  font-size: 13px;
+  color: var(--text-muted);
+  padding: 4px 2px 10px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sheet-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.sheet-row-wrap {
+  align-items: flex-start;
+}
+
+.sheet-label {
+  font-size: 13px;
+  color: var(--text-muted);
+  flex: none;
+}
+
+.stepper {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.step-btn {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg);
+  min-width: 44px;
+  padding: 7px 10px;
+  font-size: 13px;
+}
+
+.step-value {
+  min-width: 44px;
+  text-align: center;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+
+.theme-row {
+  display: flex;
+  gap: 6px;
+}
+
+.theme-btn,
+.chip {
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 12.5px;
+  padding: 7px 12px;
+}
+
+.theme-btn.is-active,
+.chip.is-active {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.encoding-box {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: flex-end;
+}
+
+.chips {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.sheet-warn {
+  margin: 0;
+  font-size: 11.5px;
+  color: var(--accent);
+  text-align: right;
+  max-width: 60vw;
+}
+
+.sheet-action {
+  width: 100%;
+  text-align: left;
+  border: 0;
+  border-radius: 10px;
+  background: var(--bg);
+  padding: 13px 14px;
+  font-size: 14px;
+}
+
+.sheet-action + .sheet-action {
+  margin-top: 6px;
+}
+
+.sheet-action.is-danger {
+  color: var(--danger);
+}
+
+/* ───────────────────────────── 导入进度 ───────────────────────────── */
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(0, 0, 0, 0.42);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.18s ease;
+}
+
+.modal-backdrop.is-open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.modal {
+  width: min(360px, 100%);
+  border-radius: 16px;
+  background: var(--bg-elevated);
+  box-shadow: var(--shadow);
+  padding: 20px;
+}
+
+.modal-title {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.modal-sub {
+  margin-top: 4px;
+  font-size: 12px;
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.progress-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 16px 0 8px;
+}
+
+.progress-bar {
+  flex: 1;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--border);
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  width: 0;
+  background: var(--accent);
+  border-radius: 999px;
+  transition: width 0.15s linear;
+}
+
+.progress-percent {
+  font-size: 12px;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+  min-width: 38px;
+  text-align: right;
+}
+
+.progress-phase {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 16px;
+}
+
+/* ───────────────────────────── Toast ───────────────────────────── */
+
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: calc(env(safe-area-inset-bottom) + 76px);
+  z-index: 100;
+  max-width: 88vw;
+  padding: 10px 16px;
+  border-radius: 999px;
+  background: rgba(24, 22, 20, 0.92);
+  color: #ffffff;
+  font-size: 13px;
+  line-height: 1.4;
+  text-align: center;
+  opacity: 0;
+  transform: translate(-50%, 10px);
+  pointer-events: none;
+  transition: opacity 0.18s ease, transform 0.18s ease;
+}
+
+.toast.is-visible {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
+/* ───────────────────────────── 宽屏 ───────────────────────────── */
+
+@media (min-width: 720px) {
+  .shelf {
+    max-width: 720px;
+    width: 100%;
+    margin: 0 auto;
+  }
+
+  /* 宽屏只限制行宽（22–30 字/行的目标），字号仍然由用户设置决定 */
+  .seg {
+    max-width: 40em;
+    margin: 0 auto;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bar,
+  .drawer,
+  .sheet,
+  .backdrop,
+  .toast,
+  .book,
+  .progress-fill {
+    transition: none;
+  }
+}

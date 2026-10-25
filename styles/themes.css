@@ -1,0 +1,65 @@
+/*
+ * 三主题变量表（KD-9 / KD-13）
+ *
+ * 主题切换只换变量，不重排结构，所以"切换即时生效、无闪烁"。
+ * --font-read 是 KD-13 定的字体栈：iOS 命中 Songti SC；绝大多数安卓没有中文衬线，
+ * 会静默落到 Noto Sans CJK（黑体）—— 接受这个回退，排版参数按黑体调优。
+ */
+
+:root {
+  color-scheme: light;
+
+  --bg: #ffffff;
+  --bg-elevated: #f7f4ef;
+  --bg-sunken: #f1ede6;
+  --text: #1f1c18;
+  --text-muted: #6b6259;
+  --border: rgba(31, 28, 24, 0.12);
+  --border-strong: rgba(31, 28, 24, 0.22);
+  --accent: #8c5a3c;
+  --accent-soft: rgba(140, 90, 60, 0.12);
+  --accent-contrast: #ffffff;
+  --danger: #b3261e;
+  --shadow: 0 10px 30px rgba(31, 28, 24, 0.16);
+
+  --font-read: "Songti SC", "STSong", "Noto Serif CJK SC", "Source Han Serif SC", "SimSun", serif;
+  --font-ui: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB",
+    "Microsoft YaHei", "Helvetica Neue", Arial, sans-serif;
+
+  --reader-font-size: 18px;
+  --reader-line-height: 1.8;
+}
+
+[data-theme="dark"] {
+  color-scheme: dark;
+
+  --bg: #14120f;
+  --bg-elevated: #1d1a16;
+  --bg-sunken: #100e0c;
+  --text: #d6cec2;
+  --text-muted: #8f857a;
+  --border: rgba(214, 206, 194, 0.14);
+  --border-strong: rgba(214, 206, 194, 0.26);
+  --accent: #c98a5e;
+  --accent-soft: rgba(201, 138, 94, 0.16);
+  --accent-contrast: #1a1512;
+  --danger: #e5796d;
+  --shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+}
+
+[data-theme="sepia"] {
+  color-scheme: light;
+
+  --bg: #f5f1e8;
+  --bg-elevated: #efe9dc;
+  --bg-sunken: #e9e2d3;
+  --text: #3a332c;
+  --text-muted: #7b6f61;
+  --border: rgba(58, 51, 44, 0.14);
+  --border-strong: rgba(58, 51, 44, 0.26);
+  --accent: #8a5b34;
+  --accent-soft: rgba(138, 91, 52, 0.14);
+  --accent-contrast: #fdfbf6;
+  --danger: #a8402f;
+  --shadow: 0 10px 30px rgba(58, 51, 44, 0.18);
+}

@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="zh-CN" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>纯文本阅读器</title>
+<meta name="description" content="一个只读 .txt 的本地网页阅读器：打开快、排版稳、进度不丢。">
+<meta name="theme-color" content="#f5f1e8">
+<meta name="format-detection" content="telephone=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="阅读器">
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="apple-touch-icon" href="./icons/apple-touch-icon.png">
+<link rel="icon" type="image/svg+xml" href="./icons/icon.svg">
+<script>
+  // KD-9：主题与字号必须在首帧前同步应用，否则暗色用户每次冷启动都会看到一次白闪。
+  // 这段必须早于样式表，且不能依赖任何模块加载。
+  (function () {
+    try {
+      var theme = localStorage.getItem('txt-reader:theme');
+      if (theme === 'dark' || theme === 'sepia' || theme === 'light') {
+        document.documentElement.dataset.theme = theme;
+      }
+      var size = parseInt(localStorage.getItem('txt-reader:fontSize'), 10);
+      if (size >= 14 && size <= 28) {
+        document.documentElement.style.setProperty('--reader-font-size', size + 'px');
+      }
+      var height = parseFloat(localStorage.getItem('txt-reader:lineHeight'));
+      if (height >= 1.4 && height <= 2.2) {
+        document.documentElement.style.setProperty('--reader-line-height', String(height));
+      }
+    } catch (error) {
+      /* Safari 无痕模式可能直接抛错，忽略即可 */
+    }
+  })();
+</script>
+<link rel="stylesheet" href="./styles/themes.css">
+<link rel="stylesheet" href="./styles/app.css">
+<script type="module" src="./src/main.js"></script>
+<script>
+  /*
+   * 启动失败兜底。
+   *
+   * 为什么需要：这是纯静态站点里最容易踩的坑 —— 双击 index.html 用 file:// 打开时，
+   * 浏览器会以 origin: null 拦掉 ES module（Chrome 报 CORS），Safari 还会禁用 IndexedDB。
+   * 结果是**整页空白**，用户看不到任何线索，只会觉得"这软件是坏的"。
+   *
+   * main.js 里 <script type="module"> 一旦成功执行，就把 data-booted 置为 1；
+   * 模块没能执行（file:// / 404 / 语法错误）时这里就把原因写进页面。
+   */
+  (function () {
+    // 注意：这段在 <head> 里执行，此时 <body> 还没解析，
+    // 所以元素必须在回调里现查，不能在解析期抓一次就存起来。
+    function nodes() {
+      return {
+        text: document.getElementById('boot-text'),
+        hint: document.getElementById('boot-hint'),
+      }
+    }
+
+    function isBooted() {
+      return document.documentElement.dataset.booted === '1'
+    }
+
+    window.addEventListener('error', function (event) {
+      if (event && event.message) window.__bootError = event.message
+    }, true)
+
+    setTimeout(function () {
+      if (isBooted()) return
+      var boot = nodes()
+      if (!boot.text || boot.text.textContent !== '正在启动…') return
+      boot.text.textContent = '还在加载…'
+    }, 1200)
+
+    setTimeout(function () {
+      if (isBooted()) return
+      var boot = nodes()
+      if (!boot.text || !boot.hint) return
+      if (location.protocol === 'file:') {
+        boot.text.textContent = '不能直接双击 index.html 打开'
+        boot.hint.textContent =
+          '这个阅读器用的是 ES module 与 IndexedDB，浏览器在 file:// 下会把它们拦掉。' +
+          '请在项目目录运行 node scripts/serve.mjs --port 8080（Windows 可直接双击 start.cmd），' +
+          '然后打开 http://127.0.0.1:8080/ 。'
+        return
+      }
+      boot.text.textContent = '加载失败'
+      boot.hint.textContent =
+        (window.__bootError ? '错误：' + window.__bootError + '。' : '') +
+        '请确认 ./src/main.js 能正常返回（开发者工具 → Network 面板），或刷新重试。'
+    }, 4000)
+  })();
+</script>
+</head>
+<body>
+<div id="app" class="app">
+  <!--
+    静态占位：main.js 渲染第一屏时会整体替换掉它。
+    好处是"脚本没跑起来"时页面不是一片空白，而是明确告诉用户为什么。
+  -->
+  <div class="boot" id="boot">
+    <div class="boot-mark">文</div>
+    <p class="boot-text" id="boot-text">正在启动…</p>
+    <p class="boot-hint" id="boot-hint"></p>
+  </div>
+</div>
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
+<noscript><p style="padding:24px;font-family:sans-serif">需要启用 JavaScript 才能使用本阅读器。</p></noscript>
+</body>
+</html>

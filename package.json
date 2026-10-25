@@ -1,0 +1,12 @@
+{
+  "name": "txt-reader",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "纯文本阅读器 · 手机为主的 PWA（零构建、零依赖）",
+  "scripts": {
+    "test": "node --test",
+    "serve": "node scripts/serve.mjs",
+    "icons": "node scripts/gen-icons.mjs"
+  }
+}
